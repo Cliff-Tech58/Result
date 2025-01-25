@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPL Guru System</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', sans-serif;
+            background-color: #f4f4f9;
+            margin: 20px;
+        }
+        h2, h3 {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        input {
+            font-size: 18px;
+            padding: 10px;
+            margin-right: 10px;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            font-size: 18px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .medal {
+            font-size: 24px;
+            color: gold;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>FPL Guru Participants</h2>
+    
+    <!-- Form to input data -->
+    <form id="participantForm">
+        <input type="text" id="name" placeholder="Enter Name" required>
+        <input type="number" id="contribution" placeholder="Contribution" required>
+        <input type="number" id="gwkPoints" placeholder="GWK Points" required>
+        <button type="button" class="button" onclick="addParticipant()">Add Participant</button>
+        <button type="button" class="button" id="updateButton" onclick="updateParticipant()" style="display: none;">Update Participant</button>
+    </form>
+    
+    <!-- Table to display participants -->
+    <h3>Participant List</h3>
+    <table id="participantTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Contribution</th>
+                <th>GWK Points</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <button class="button" onclick="downloadAsPNG('participantTable', 'participants.png')">Download Participants as PNG</button>
+
+    <h2>Game Week Winners</h2>
+
+    <!-- Form to input winners -->
+    <form id="winnersForm">
+        <input type="text" id="gameWeek" placeholder="Enter Game Week" required>
+        <input type="text" id="winner" placeholder="Enter Winner Name" required>
+        <button type="button" class="button" onclick="addWinner()">Add Winner</button>
+    </form>
+    
+    <!-- Table to display winners -->
+    <h3>Winners List</h3>
+    <table id="winnersTable">
+        <thead>
+            <tr>
+                <th>Game Week</th>
+                <th>Winner</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <button class="button" onclick="downloadAsPNG('winnersTable', 'winners.png')">Download Winners as PNG</button>
+
+    <!-- Script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        let participants = JSON.parse(localStorage.getItem('participants')) || [];
+        let winners = JSON.parse(localStorage.getItem('winners')) || [];
+        let editIndex = null;
+
+        // Load saved data
+        window.onload = function() {
+            displayParticipants();
+            displayWinners();
+        };
+
+        // Function to add participant
+        function addParticipant() {
+            let name = document.getElementById('name').value;
+            let contribution = document.getElementById('contribution').value;
+            let gwkPoints = document.getElementById('gwkPoints').value;
+
+            if (name && contribution && gwkPoints) {
+                participants.push({ name, contribution, gwkPoints: parseInt(gwkPoints) });
+                localStorage.setItem('participants', JSON.stringify(participants));
+                displayParticipants();
+
+                // Clear input fields
+                document.getElementById('participantForm').reset();
+            } else {
+                alert('Please fill in all fields.');
+            }
+        }
+
+        // Function to display participants, sorted by points
+        function displayParticipants() {
+            participants.sort((a, b) => b.gwkPoints - a.gwkPoints); // Sort by points
+            let tableBody = document.getElementById('participantTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+
+            participants.forEach((participant, index) => {
+                let newRow = tableBody.insertRow();
+                let nameCell = newRow.insertCell(0);
+
+                // Assign medal to the top scorer
+                let displayName = participant.name;
+                if (index === 0) {
+                    displayName += ' <span class="medal">🏅</span>';  // Medal for top scorer
+                }
+                nameCell.innerHTML = displayName;
+                newRow.insertCell(1).innerHTML = participant.contribution;
+                newRow.insertCell(2).innerHTML = participant.gwkPoints;
+
+                // Actions: Edit and Delete
+                let actionsCell = newRow.insertCell(3);
+                actionsCell.innerHTML = `
+                    <button onclick="editParticipant(${index})">Edit</button>
+                    <button onclick="deleteParticipant(${index})">Delete</button>
+                `;
+            });
+        }
+
+        // Function to edit participant
+        function editParticipant(index) {
+            editIndex = index;
+            let participant = participants[index];
+            document.getElementById('name').value = participant.name;
+            document.getElementById('contribution').value = participant.contribution;
+            document.getElementById('gwkPoints').value = participant.gwkPoints;
+
+            // Show update button and hide add button
+            document.getElementById('updateButton').style.display = 'inline-block';
+            document.querySelector('form button[onclick="addParticipant()"]').style.display = 'none';
+        }
+
+        // Function to update participant
+        function updateParticipant() {
+            let name = document.getElementById('name').value;
+            let contribution = document.getElementById('contribution').value;
+            let gwkPoints = document.getElementById('gwkPoints').value;
+
+            if (name && contribution && gwkPoints) {
+                participants[editIndex] = { name, contribution, gwkPoints: parseInt(gwkPoints) };
+                localStorage.setItem('participants', JSON.stringify(participants));
+                displayParticipants();
+
+                // Reset form and buttons
+                document.getElementById('participantForm').reset();
+                document.getElementById('updateButton').style.display = 'none';
+                document.querySelector('form button[onclick="addParticipant()"]').style.display = 'inline-block';
+
+                editIndex = null;
+            } else {
+                alert('Please fill in all fields.');
+            }
+        }
+
+        // Function to delete participant
+        function deleteParticipant(index) {
+            participants.splice(index, 1);
+            localStorage.setItem('participants', JSON.stringify(participants));
+            displayParticipants();
+        }
+
+        // Function to add winner
+        function addWinner() {
+            let gameWeek = document.getElementById('gameWeek').value;
+            let winner = document.getElementById('winner').value;
+
+            if (gameWeek && winner) {
+                winners.push({ gameWeek, winner });
+                localStorage.setItem('winners', JSON.stringify(winners));
+                displayWinners();
+
+                // Clear input fields
+                document.getElementById('winnersForm').reset();
+            } else {
+                alert('Please fill in all fields.');
+            }
+        }
+
+        // Function to display winners
+        function displayWinners() {
+            let tableBody = document.getElementById('winnersTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+
+            winners.forEach((winner, index) => {
+                let newRow = tableBody.insertRow();
+                newRow.insertCell(0).innerHTML = winner.gameWeek;
+                newRow.insertCell(1).innerHTML = winner.winner + ' <span class="medal">🏅</span>';
+
+                // Actions: Edit and Delete
+                let actionsCell = newRow.insertCell(2);
+                actionsCell.innerHTML = `
+                    <button onclick="editWinner(${index})">Edit</button>
+                    <button onclick="deleteWinner(${index})">Delete</button>
+                `;
+            });
+        }
+
+        // Edit winner
+        function editWinner(index) {
+            let winner = winners[index];
+            document.getElementById('gameWeek').value = winner.gameWeek;
+            document.getElementById('winner').value = winner.winner;
+        }
+
+        // Delete winner
+        function deleteWinner(index) {
+            winners.splice(index, 1);
+            localStorage.setItem('winners', JSON.stringify(winners));
+            displayWinners();
+        }
+
+        // Function to download the table as PNG
+        function downloadAsPNG(tableId, filename) {
+            let table = document.getElementById(tableId);
+            html2canvas(table).then(function(canvas) {
+                let link = document.createElement('a');
+                link.download = filename;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+    </script>
+
+</body>
+</html>
